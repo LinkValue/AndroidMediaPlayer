@@ -12,6 +12,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.*
+import android.provider.MediaStore
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaBrowserServiceCompat
 import android.support.v4.media.MediaMetadataCompat
@@ -20,8 +21,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import android.util.Log
-import com.google.android.gms.common.GoogleApiAvailability
-import com.yourewelcome.smith.R
+import fr.linkvalue.notifmediaplayer.MediaPlayerManager
 import java.lang.ref.WeakReference
 
 /**
@@ -76,7 +76,7 @@ import java.lang.ref.WeakReference
  * &lt;/automotiveApp&gt;
  *
  */
-class YWMusicService : MediaBrowserServiceCompat() {
+class MusicService : MediaBrowserServiceCompat() {
 
     private lateinit var mediaSessionCompat: MediaSessionCompat
     private var notificationManager: MediaNotificationManager? = null
@@ -111,9 +111,9 @@ class YWMusicService : MediaBrowserServiceCompat() {
         override fun onReceive(context: Context, intent: Intent) {
             if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent.action) {
                 if (mediaPlayer.isPlaying) {
-                    val i = Intent(context, YWMusicService::class.java)
-                    i.action = YWMusicService.ACTION_CMD
-                    i.putExtra(YWMusicService.CMD_NAME, YWMusicService.CMD_PAUSE)
+                    val i = Intent(context, MusicService::class.java)
+                    i.action = MusicService.ACTION_CMD
+                    i.putExtra(MusicService.CMD_NAME, MusicService.CMD_PAUSE)
                     startService(i)
                 }
             }
@@ -148,7 +148,6 @@ class YWMusicService : MediaBrowserServiceCompat() {
             throw IllegalStateException("Could not create a MediaNotificationManager", e)
         }
 
-        GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
     }
 
     /**
@@ -199,7 +198,7 @@ class YWMusicService : MediaBrowserServiceCompat() {
 
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): MediaBrowserServiceCompat.BrowserRoot? {
         return if (TextUtils.equals(clientPackageName, packageName)) {
-            MediaBrowserServiceCompat.BrowserRoot(getString(R.string.app_name), null)
+            MediaBrowserServiceCompat.BrowserRoot(MediaPlayerManager.rootID, null)
         } else null
 
     }
@@ -219,7 +218,7 @@ class YWMusicService : MediaBrowserServiceCompat() {
         // The service needs to continue running even after the bound client (usually a
         // MediaController) disconnects, otherwise the music playback will stop.
         // Calling startService(Intent) will keep the service running until it is explicitly killed.
-        startService(Intent(applicationContext, YWMusicService::class.java))
+        startService(Intent(applicationContext, MusicService::class.java))
     }
 
     /**
@@ -251,8 +250,11 @@ class YWMusicService : MediaBrowserServiceCompat() {
     }
 
     private fun initMediaPlayer() {
+        val filePath = MediaPlayerManager.filePath
+        if (filePath.isNullOrEmpty()) {
+            return
+        }
         try {
-            val filePath = getString(R.string.relax_track_name)
             if (mediaPlayer.isPlaying) {
                 mediaPlayer.stop()
             }
@@ -289,13 +291,13 @@ class YWMusicService : MediaBrowserServiceCompat() {
     private fun initMediaSessionMetadata() {
         val metadataBuilder = MediaMetadataCompat.Builder()
         //Notification icon in card
-        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, BitmapFactory.decodeResource(resources, R.drawable.ic_play_arrow))
-        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher))
+        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, BitmapFactory.decodeResource(resources, MediaPlayerManager.displayIconId))
+        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, BitmapFactory.decodeResource(resources, MediaPlayerManager.albumArtId))
 
         //lock screen icon for pre lollipop
-        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher))
-        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, "")
-        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, getString(R.string.relax_player_title_label))
+        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, BitmapFactory.decodeResource(resources, MediaPlayerManager.artPicResId))
+        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, MediaPlayerManager.title)
+        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, MediaPlayerManager.subtitile)
         metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1)
         metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1)
 
@@ -350,8 +352,8 @@ class YWMusicService : MediaBrowserServiceCompat() {
     /**
      * A simple handler that stops the service if playback is not active (playing)
      */
-    private class DelayedStopHandler constructor(service: YWMusicService) : Handler() {
-        private val mWeakReference = WeakReference<YWMusicService>(service)
+    private class DelayedStopHandler constructor(service: MusicService) : Handler() {
+        private val mWeakReference = WeakReference<MusicService>(service)
 
         override fun handleMessage(msg: Message) {
             val service = mWeakReference.get()
@@ -389,11 +391,11 @@ class YWMusicService : MediaBrowserServiceCompat() {
 
     companion object {
 
-        private val TAG = YWMusicService::class.java.canonicalName
+        private val TAG = MusicService::class.java.canonicalName
 
         // The action of the incoming Intent indicating that it contains a command
         // to be executed (see {@link #onStartCommand})
-        private const val ACTION_CMD = "com.yw.smith.ACTION_CMD"
+        private const val ACTION_CMD = "fr.linkvalue.mediaplayer.ACTION_CMD"
         // The key in the extras of the incoming Intent indicating the command that
         // should be executed (see {@link #onStartCommand})
         private const val CMD_NAME = "CMD_NAME"

@@ -34,9 +34,9 @@ import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.app.NotificationCompat.MediaStyle
-import android.support.v4.view.ViewCompat
 
 import android.util.Log
+import fr.linkvalue.notifmediaplayer.MediaPlayerManager
 
 /**
  * Keeps track of a notification and updates it automatically for a given
@@ -44,7 +44,7 @@ import android.util.Log
  * won't be killed during playback.
  */
 class MediaNotificationManager @Throws(RemoteException::class)
-constructor(private val ywMusicService: YWMusicService) : BroadcastReceiver() {
+constructor(private val ywMusicService: MusicService) : BroadcastReceiver() {
     private var sessionToken: MediaSessionCompat.Token? = null
     private var controller: MediaControllerCompat? = null
     private var mTransportControls: MediaControllerCompat.TransportControls? = null
@@ -190,15 +190,14 @@ constructor(private val ywMusicService: YWMusicService) : BroadcastReceiver() {
         }
 
         val description = mMetadata!!.description
-        //TODO use Manager config
-        val art = BitmapFactory.decodeResource(ywMusicService.resources, R.mipmap.ic_launcher)
+        val art = BitmapFactory.decodeResource(ywMusicService.resources, MediaPlayerManager.displayIconId)
 
         // Notification channels are only supported on Android O+.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel()
         }
 
-        val notificationBuilder = NotificationCompat.Builder(ywMusicService, CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(ywMusicService, MediaPlayerManager.channelId)
 
         val playPauseButtonPosition = addActions(notificationBuilder)
         notificationBuilder
@@ -209,7 +208,7 @@ constructor(private val ywMusicService: YWMusicService) : BroadcastReceiver() {
                         .setCancelButtonIntent(stopIntent)
                         .setMediaSession(sessionToken))
                 .setDeleteIntent(stopIntent)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(MediaPlayerManager.smallIconId)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
                 .setContentIntent(createContentIntent())
@@ -229,12 +228,12 @@ constructor(private val ywMusicService: YWMusicService) : BroadcastReceiver() {
         val icon: Int
         val intent: PendingIntent
         if (mPlaybackState!!.state == PlaybackStateCompat.STATE_PLAYING) {
-            label = ywMusicService.getString(R.string.relax_player_pause_label)
-            icon = R.drawable.ic_pause
+            label = MediaPlayerManager.pauseLabel
+            icon = MediaPlayerManager.pauseIconResId
             intent = pauseIntent
         } else {
-            label = ywMusicService.getString(R.string.relax_player_play_label)
-            icon = R.drawable.ic_play_arrow
+            label = MediaPlayerManager.playLabel
+            icon = MediaPlayerManager.playIconResId
             intent = playIntent
         }
         notificationBuilder.addAction(NotificationCompat.Action(icon, label, intent))
@@ -258,9 +257,8 @@ constructor(private val ywMusicService: YWMusicService) : BroadcastReceiver() {
      */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel() {
-        if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-            val notificationChannel = NotificationChannel(CHANNEL_ID,
-                    ywMusicService.getString(R.string.relax_notification_channel_name),
+        if (notificationManager.getNotificationChannel(MediaPlayerManager.channelId) == null) {
+            val notificationChannel = NotificationChannel(MediaPlayerManager.channelId, MediaPlayerManager.channelName,
                     NotificationManager.IMPORTANCE_LOW)
 
             notificationManager.createNotificationChannel(notificationChannel)
@@ -269,15 +267,13 @@ constructor(private val ywMusicService: YWMusicService) : BroadcastReceiver() {
 
     companion object {
         private val TAG = MediaNotificationManager::class.java.canonicalName
-        //TODO make them customizable
-        private const val CHANNEL_ID = "com.yw.smith.RELAX_CHANNEL_ID"
 
         private const val NOTIFICATION_ID = 412
         private const val REQUEST_CODE = 100
 
-        private const val ACTION_PAUSE = "com.yw.smith.pause"
-        private const val ACTION_PLAY = "com.yw.smith.play"
-        private const val ACTION_STOP = "com.yw.smith.stop"
+        private const val ACTION_PAUSE = "fr.linkvalue.mediaplayer.pause"
+        private const val ACTION_PLAY = "fr.linkvalue.mediaplayer.play"
+        private const val ACTION_STOP = "fr.linkvalue.mediaplayer.stop"
 
     }
 }

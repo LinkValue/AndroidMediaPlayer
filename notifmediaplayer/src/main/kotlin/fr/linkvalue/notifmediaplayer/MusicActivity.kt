@@ -1,13 +1,8 @@
 package com.yourewelcome.smith.feature.relax
 
 import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.os.RemoteException
-import android.support.v4.content.ContextCompat
-import android.support.v4.graphics.drawable.DrawableCompat
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -16,7 +11,6 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import com.yourewelcome.smith.R
 import com.yourewelcome.smith.feature.base.YWBaseActivity
-import fr.linkvalue.notifmediaplayer.R
 import kotlinx.android.synthetic.main.activity_relax.*
 
 abstract class MusicActivity : AppCompatActivity() {
@@ -52,7 +46,7 @@ abstract class MusicActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mediaBrowser = MediaBrowserCompat(this, ComponentName(this, YWMusicService::class.java),
+        mediaBrowser = MediaBrowserCompat(this, ComponentName(this, MusicService::class.java),
                 connectionCallback, null)
     }
 
